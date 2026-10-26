@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th"><head><base target="_top"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCU2 Ethic Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f5f1fb;--card:#fff;--tx:#2b2140;--mu:#6d6385;--pr:#6d3fc0;--pr2:#ede4fb;--bd:#d9ccf0;--ok:#1f9d63;--no:#d4483b}
+@media(prefers-color-scheme:dark){:root{--bg:#17121f;--card:#221a30;--tx:#efe9fa;--mu:#a99fc2;--pr:#a67df0;--pr2:#33264a;--bd:#43355e;--ok:#4cc58c;--no:#f07a6e}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 Sarabun,"Noto Sans Thai",system-ui,sans-serif}
+header{background:linear-gradient(135deg,#5a2fa8,#8a5bd6);color:#fff;padding:14px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header h1{font-size:20px;margin:0;flex:1}header small{opacity:.85}
+nav{display:flex;gap:6px;padding:10px 14px;overflow-x:auto}
+button{font:inherit;border:0;border-radius:10px;padding:8px 14px;cursor:pointer;background:var(--pr);color:#fff}
+button.g{background:var(--pr2);color:var(--pr)}button.d{background:var(--no)}button:disabled{opacity:.5}
+nav button{background:var(--pr2);color:var(--pr);white-space:nowrap}nav button.on{background:var(--pr);color:#fff}
+main{max-width:980px;margin:0 auto;padding:6px 14px 40px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin:12px 0}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+input,select,textarea{font:inherit;width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx);margin:4px 0 10px}
+label{font-size:14px;color:var(--mu)}
+.bar{height:12px;background:var(--pr2);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pr)}
+.tag{display:inline-block;font-size:12px;padding:1px 9px;border-radius:99px;background:var(--pr2);color:var(--pr);margin-right:4px}
+.tag.ok{background:var(--ok);color:#fff}.tag.rq{background:#f6b73c;color:#3a2800}
+.big{font-size:38px;font-weight:700;color:var(--pr);line-height:1.1}
+.mod{display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid var(--bd);padding:10px 0;flex-wrap:wrap}
+.q{margin:14px 0}.q label{color:var(--tx);display:block;font-size:16px;padding:3px 0}.q input{width:auto;margin:0 8px 0 0}
+pre.c{white-space:pre-wrap;font:inherit;margin:0}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{border-bottom:1px solid var(--bd);padding:6px;text-align:left}
+.rad text{fill:var(--tx);font-size:11px}.rad .ring{fill:none;stroke:var(--bd)}
+</style></head><body>
+<header><h1>🕊️ CCU2 Ethic Academy<br><small>พัฒนาสมรรถนะจริยธรรมทางการพยาบาล 8 ด้าน · คณะกรรมการจริยธรรมประจำหอผู้ป่วย</small></h1><span id="who"></span></header>
+<nav id="nav"></nav><main id="app"><div class="card">กำลังโหลด…</div></main>
+<script>
+/* ตั้งค่า 2 ค่านี้ก่อนนำไปโฮสต์ */
+const API_URL="https://script.google.com/macros/s/AKfycbzGTfuRbl5NcKcga4c_4BVCH479tdp1eoxtDv8AZ3XS4TL6c_4QxSX_ABFW1xBoqyqDWQ/exec",CLIENT_ID="1003364126988-ktee67ts30ovmmc3d7bcq3k61lc162pu.apps.googleusercontent.com";
+let TOKEN=null;
+const C=["พฤติกรรมจริยธรรม 3Rs","ความไวทางจริยธรรม","ค้นหาความเสี่ยง","ตัดสินใจทางจริยธรรม","นิเทศ/Coaching","ที่ปรึกษาจริยธรรม","วิจัย/นวัตกรรม","นโยบาย/ยุทธศาสตร์"];
+const L=["Novice (0–1 ปี)","Adv. Beginner (1–3 ปี)","Competent (3–5 ปี)","Proficient (5–10 ปี)","Expert (>10 ปี)"];
+const reqLv=y=>y<1?1:y<3?2:y<5?3:y<10?4:5;
+const $=id=>document.getElementById(id),A=$("app");
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const run=async(f,...a)=>{const r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn:f,token:TOKEN,args:a})}).then(x=>x.json());
+if(!r.ok){if(r.error==="AUTH"){TOKEN=null;login("เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง");return new Promise(()=>{})}throw new Error(r.error)}return r.data};
+const msg=e=>(e&&e.message)||String(e);
+let S={},view="home",cur=null,adm=null,pend=[];
+const done=id=>S.done&&S.done[id]!==undefined;
+const reqMods=y=>S.mods.filter(m=>m.level<=reqLv(y));
+const pctOf=(y,d)=>{const r=reqMods(y);return r.length?Math.round(100*r.filter(m=>d[m.id]!==undefined).length/r.length):0};
+const maxLv=(c,d)=>Math.max(0,...S.mods.filter(m=>m.comp===c&&d[m.id]!==undefined).map(m=>m.level));
+const busy=t=>{A.innerHTML=`<div class="card">${t||"กำลังโหลด…"}</div>`};
+
+function radar(d){const cx=150,cy=150,R=95,n=8;const pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/n;return[cx+R*v*Math.cos(a),cy+R*v*Math.sin(a)]};let g="";
+[.2,.4,.6,.8,1].forEach(v=>g+=`<polygon class="ring" points="${C.map((_,i)=>pt(i,v).join(",")).join(" ")}"/>`);
+C.forEach((c,i)=>{const[x,y]=pt(i,1),[lx,ly]=pt(i,1.22);g+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--bd)"/><text x="${lx}" y="${ly}" text-anchor="middle">${i+1}. ${esc(c.length>14?c.slice(0,13)+"…":c)}</text>`});
+const vs=C.map((_,i)=>maxLv(i+1,d)/5);
+return`<svg class="rad" viewBox="0 0 300 300" width="100%" style="max-width:420px">${g}<polygon points="${vs.map((v,i)=>pt(i,v).join(",")).join(" ")}" fill="var(--pr)" fill-opacity=".3" stroke="var(--pr)" stroke-width="2"/></svg>`}
+
+function nav(){const t=[["home","📊 ความก้าวหน้าของฉัน"],["learn","📚 บทเรียน"]];if(S.admin)t.push(["admin","⚙️ หลังบ้าน"]);
+$("nav").innerHTML=t.map(([k,l])=>`<button class="${view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
+$("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{view=b.dataset.v;cur=null;render()})}
+function render(){nav();$("who").innerHTML=S.staff?`<small>${esc(S.staff.first)} ${esc(S.staff.last)} · ${L[reqLv(S.staff.years)-1].split(" ")[0]}</small>`:"";
+if(view==="admin")return adminView();if(!S.staff)return A.innerHTML=`<div class="card">แอดมิน: ไปที่แท็บ "หลังบ้าน" หรือ <button id="rg">ลงทะเบียนเป็นผู้เรียน</button></div>`,$("rg").onclick=()=>form(true);
+view==="learn"?learnView():homeView()}
+
+function homeView(){const y=S.staff.years,p=pctOf(y,S.done),rl=reqLv(y);
+A.innerHTML=`<div class="grid"><div class="card"><div>ความสำเร็จตามระดับอายุงาน (ระดับ 1–${rl})</div><div class="big">${p}%</div><div class="bar"><i style="width:${p}%"></i></div>
+<p style="color:var(--mu)">อายุงาน ${esc(y)} ปี → ต้องเรียนระดับ 1–${rl} (${reqMods(y).length} บท) · ผ่านแล้ว ${Object.keys(S.done).length} บท</p></div>
+<div class="card"><b>สมรรถนะ 8 ด้าน</b><br>${radar(S.done)}<small style="color:var(--mu)">แต่ละแกน = ระดับสูงสุดที่สอบผ่าน (เต็ม 5)</small></div></div>
+<div class="card"><b>ความก้าวหน้าแยกระดับ</b>${L.map((l,i)=>{const m=S.mods.filter(x=>x.level===i+1),d=m.filter(x=>done(x.id)).length,v=m.length?Math.round(100*d/m.length):0;return`<div style="margin:10px 0"><span class="tag ${i+1<=rl?"rq":""}">ระดับ ${i+1}</span>${l}<span style="float:right">${d}/${m.length}</span><div class="bar"><i style="width:${v}%"></i></div></div>`}).join("")}</div>`}
+
+function learnView(){const rl=reqLv(S.staff.years);
+A.innerHTML=L.map((l,i)=>{const m=S.mods.filter(x=>x.level===i+1);return`<div class="card"><b>ระดับ ${i+1}: ${l}</b> ${i+1<=rl?'<span class="tag rq">ตามอายุงาน</span>':'<span class="tag">เรียนเพิ่มได้</span>'}
+${m.length?m.map(x=>`<div class="mod"><div>${done(x.id)?'<span class="tag ok">ผ่าน '+S.done[x.id]+'%</span>':""}<span class="tag">ด้าน ${x.comp}</span>${esc(x.title)}</div><button data-m="${x.id}">${done(x.id)?"ทบทวน":"เริ่มเรียน"}</button></div>`).join(""):'<p style="color:var(--mu)">ยังไม่มีบทเรียน</p>'}</div>`}).join("");
+A.querySelectorAll("[data-m]").forEach(b=>b.onclick=async()=>{busy();try{const m=S.mods.find(x=>x.id===b.dataset.m);cur={...m,...await run("getModule",m.id)};modView()}catch(e){busy(esc(msg(e)))}})}
+
+function fileHtml(fs){return fs.length?`<div style="margin:12px 0">${fs.map(f=>/^image/.test(f.type)?`<div><img src="https://drive.google.com/thumbnail?id=${esc(f.id)}&sz=w1000" style="max-width:100%;border-radius:10px;margin:6px 0"></div>`:"").join("")}${fs.map(f=>`<div>📎 <a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.name)}</a></div>`).join("")}</div>`:""}
+function modView(){const m=cur;
+A.innerHTML=`<div class="card"><button class="g" id="bk">← กลับ</button><h2>${esc(m.title)}</h2><span class="tag">ระดับ ${m.level}</span><span class="tag">ด้าน ${m.comp}: ${esc(C[m.comp-1])}</span>${fileHtml(m.files)}<pre class="c" style="margin-top:12px">${esc(m.content)}</pre></div>
+<div class="card"><h3>แบบทดสอบ (ผ่านเมื่อได้ ≥ ${m.pass}%)</h3>${done(m.id)?`<p><span class="tag ok">สอบผ่านแล้ว ${S.done[m.id]}%</span> <button id="ct">⬇️ ใบเกียรติบัตร</button></p>`:""}
+${m.q.map((q,i)=>`<div class="q"><b>${i+1}. ${esc(q.q)}</b>${q.c.map((c,j)=>`<label><input type="radio" name="q${i}" value="${j}">${esc(c)}</label>`).join("")}</div>`).join("")||"ยังไม่มีข้อสอบ"}
+<button id="sb" ${m.q.length?"":"disabled"}>ส่งคำตอบ</button><div id="rs"></div></div>`;
+$("bk").onclick=()=>{cur=null;render()};if($("ct"))$("ct").onclick=()=>cert(m,S.done[m.id]);
+$("sb").onclick=async()=>{const ans=m.q.map((_,i)=>{const s=document.querySelector(`input[name=q${i}]:checked`);return s?+s.value:-1});$("sb").disabled=true;
+try{const r=await run("submit",m.id,ans);if(r.pass)S.done[m.id]=Math.max(r.score,S.done[m.id]||0);
+$("rs").innerHTML=`<p style="color:var(--${r.pass?"ok":"no"})"><b>${r.pass?"ผ่าน!":"ยังไม่ผ่าน"}</b> ได้ ${r.ok}/${r.total} (${r.score}%)</p>${r.pass?'<button id="c2">⬇️ ใบเกียรติบัตร</button>':"<p>ทบทวนเนื้อหาแล้วสอบใหม่ได้</p>"}`;if(r.pass)$("c2").onclick=()=>cert(m,S.done[m.id])}catch(e){$("rs").textContent=msg(e)}$("sb").disabled=false}}
+
+function cert(m,sc){const dt=new Date().toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"});
+const h=`<!DOCTYPE html><html lang="th"><meta charset="utf-8"><title>เกียรติบัตร</title><style>@page{size:A4 landscape;margin:0}body{margin:0;font-family:Sarabun,"Noto Sans Thai",sans-serif;text-align:center;color:#2b2140}.b{margin:20px;border:8px double #6d3fc0;padding:60px 40px;height:calc(100vh - 40px);box-sizing:border-box}h1{color:#6d3fc0;font-size:44px;margin:0}h2{font-size:38px;margin:24px 0}p{font-size:20px;margin:8px}</style><body><div class="b"><h1>เกียรติบัตร</h1><p>CCU2 Ethic Academy · คณะกรรมการจริยธรรมประจำหอผู้ป่วย</p><p>ขอมอบให้</p><h2>${esc(S.staff.first)} ${esc(S.staff.last)}</h2><p>ผ่านการทดสอบหัวข้อ</p><p style="font-size:26px"><b>${esc(m.title)}</b></p><p>สมรรถนะด้านที่ ${m.comp}: ${esc(C[m.comp-1])} · ระดับ ${m.level} (${L[m.level-1]})</p><p>คะแนน ${sc}% · วันที่ ${dt}</p></div></body></html>`;
+const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([h],{type:"text/html"}));a.download=`certificate-${m.id}.html`;document.body.appendChild(a);a.click();a.remove()}
+
+/* ---------- admin ---------- */
+const b64=f=>new Promise(r=>{const x=new FileReader();x.onload=()=>r({name:f.name,mime:f.type,b64:String(x.result).split(",")[1]});x.readAsDataURL(f)});
+function pick(acc,multi,cb){const i=document.createElement("input");i.type="file";i.accept=acc;i.multiple=multi;i.onchange=()=>{if(i.files.length)cb([...i.files])};i.click()}
+async function parseExam(f){const ext=f.name.split(".").pop().toLowerCase();let rows;
+if(ext==="txt")rows=(await f.text()).split(/\r?\n/).filter(l=>l.trim()).map(l=>l.split("|"));
+else{const wb=ext==="csv"?XLSX.read(await f.text(),{type:"string"}):XLSX.read(await f.arrayBuffer());rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1})}
+const out=[];rows.forEach(r=>{r=r.map(x=>String(x??"").trim());while(r.length&&!r[r.length-1])r.pop();if(r.length<4)return;const l=r[r.length-1],k=/^[A-Da-d]$/.test(l)?l.toLowerCase().charCodeAt(0)-96:+l;if(!(k>=1))return;
+const c=r.slice(1,-1).filter(Boolean).slice(0,4);if(r[0]&&c.length>=2)out.push({q:r[0],c,a:Math.min(k,c.length)-1})});if(!out.length)throw new Error("อ่านข้อสอบจากไฟล์ไม่ได้");return out}
+
+async function adminView(){if(!adm){busy();try{adm=await run("adminData")}catch(e){return busy(esc(msg(e)))}}
+const note=t=>{$("msg").textContent=t};
+A.innerHTML=`<div class="card"><h3>เพิ่มบทเรียน + ข้อสอบ</h3><label>ชื่อหัวข้อ</label><input id="t"><div class="grid"><div><label>ระดับ (Benner)</label><select id="lv">${L.map((l,i)=>`<option value="${i+1}">${i+1}. ${l}</option>`).join("")}</select></div><div><label>สมรรถนะด้านที่</label><select id="cp">${C.map((c,i)=>`<option value="${i+1}">${i+1}. ${c}</option>`).join("")}</select></div></div>
+<label>เนื้อหา (ข้อความ)</label><textarea id="ct" rows="6"></textarea>
+<label>แนบไฟล์เนื้อหา (PDF, รูป, วิดีโอ ฯลฯ เลือกได้หลายไฟล์)</label><input id="cf" type="file" multiple><div id="pf" style="font-size:14px;color:var(--mu)"></div>
+<label>นำเข้าข้อสอบจากไฟล์ (.xlsx/.csv/.txt) คอลัมน์: คำถาม, ตัวเลือก 1–4, เฉลย (เลขข้อหรือ A–D)</label><input id="qf" type="file" accept=".csv,.txt,.xlsx,.xls"><div id="qn" style="font-size:14px;color:var(--mu)"></div>
+<label>เกณฑ์ผ่าน (%)</label><input id="ps" type="number" value="70"><button id="add">บันทึกบทเรียน</button> <span id="msg"></span></div>
+<div class="card"><h3>บทเรียนทั้งหมด (${adm.mods.length})</h3>${adm.mods.map(m=>`<div class="mod"><div><span class="tag">L${m.level}</span><span class="tag">ด้าน ${m.comp}</span>${esc(m.title)} <small>(${m.nq} ข้อ, ${m.files.length} ไฟล์)</small></div><span><button class="g" data-att="${m.id}">📎 แนบไฟล์</button> <button class="g" data-qx="${m.id}">📝 เพิ่มข้อสอบ</button> <button class="d" data-del="${m.id}">ลบ</button></span></div>`).join("")}</div>
+<div class="card"><h3>สมรรถนะบุคลากร (${adm.staff.length} คน)</h3><div style="overflow-x:auto"><table><tr><th>ชื่อ</th><th>อายุงาน</th><th>เป้าหมาย</th><th>%</th>${C.map((_,i)=>`<th>${i+1}</th>`).join("")}</tr>
+${adm.staff.map(s=>`<tr><td>${esc(s.first)} ${esc(s.last)}</td><td>${esc(s.years)}</td><td>L${reqLv(s.years)}</td><td>${pctOf(s.years,s.done)}%</td>${C.map((_,i)=>`<td>${maxLv(i+1,s.done)}</td>`).join("")}</tr>`).join("")}</table></div></div>`;
+let qs=[],files=[];
+const reload=async t=>{adm=null;S.mods=(await run("init")).mods;await adminView();$("msg").textContent=t};
+$("cf").onchange=e=>{files=[...e.target.files];$("pf").textContent=files.map(f=>f.name).join(", ")};
+$("qf").onchange=async e=>{try{qs=await parseExam(e.target.files[0]);$("qn").textContent="นำเข้า "+qs.length+" ข้อ"}catch(x){qs=[];$("qn").textContent=msg(x)}};
+$("add").onclick=async()=>{if(!$("t").value.trim())return note("กรุณาใส่ชื่อหัวข้อ");$("add").disabled=true;note("กำลังบันทึก/อัปโหลดไฟล์…");
+try{await run("saveModule",{title:$("t").value.trim(),level:+$("lv").value,comp:+$("cp").value,content:$("ct").value,pass:+$("ps").value||70,qs,files:await Promise.all(files.map(b64))});await reload("✓ บันทึกแล้ว")}catch(x){note(msg(x));$("add").disabled=false}};
+A.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{if(confirm("ลบบทเรียนนี้?")){try{await run("deleteModule",b.dataset.del);await reload("✓ ลบแล้ว")}catch(x){note(msg(x))}}});
+A.querySelectorAll("[data-att]").forEach(b=>b.onclick=()=>pick("*/*",true,async fs=>{note("กำลังอัปโหลด…");try{await run("addFiles",b.dataset.att,await Promise.all(fs.map(b64)));await reload("✓ แนบไฟล์แล้ว")}catch(x){note(msg(x))}}));
+A.querySelectorAll("[data-qx]").forEach(b=>b.onclick=()=>pick(".csv,.txt,.xlsx,.xls",false,async fs=>{try{const q=await parseExam(fs[0]);await run("addQuestions",b.dataset.qx,q);await reload("✓ เพิ่มข้อสอบ "+q.length+" ข้อ")}catch(x){note(msg(x))}}))}
+
+function form(first){A.innerHTML=`<div class="card" style="max-width:460px;margin:20px auto"><h3>${first?"ลงทะเบียนครั้งแรก":"ยืนยันตัวตน"}</h3><p style="color:var(--mu)">${esc(S.email)}</p>
+<label>ชื่อ</label><input id="f"><label>นามสกุล</label><input id="l">${first?'<label>อายุงาน (ปี)</label><input id="y" type="number" min="0" step="0.5">':""}<button id="go">เข้าสู่ระบบ</button> <span id="er" style="color:var(--no)"></span></div>`;
+$("go").onclick=async()=>{const f=$("f").value.trim(),l=$("l").value.trim();if(!f||!l)return $("er").textContent="กรอกชื่อและนามสกุล";
+if(first){const y=parseFloat($("y").value);if(isNaN(y)||y<0)return $("er").textContent="กรอกอายุงาน";try{await run("register",f,l,y);S.staff={first:f,last:l,years:y};view="home";render()}catch(e){$("er").textContent=msg(e)}}
+else{if(f.toLowerCase()!==S.staff.first.toLowerCase()||l.toLowerCase()!==S.staff.last.toLowerCase())return $("er").textContent="ชื่อ-สกุลไม่ตรงกับที่ลงทะเบียน";view="home";render()}}}
+
+function login(m){busy((m?"<p style='color:var(--no)'>"+esc(m)+"</p>":"")+'<h3>เข้าสู่ระบบด้วยบัญชี @cmu.ac.th</h3><div id="gb"></div>');
+google.accounts.id.initialize({client_id:CLIENT_ID,hd:"cmu.ac.th",callback:r=>{TOKEN=r.credential;boot()}});
+google.accounts.id.renderButton($("gb"),{theme:"filled_blue",size:"large",text:"signin_with",locale:"th"})}
+function boot(){busy();run("init").then(r=>{S=r;adm=null;view="home";if(!S.staff&&S.admin){view="admin";render()}else form(!S.staff)}).catch(e=>login(msg(e)))}
+window.addEventListener("load",()=>{
+if(location.protocol==="file:")return busy("เปิดจากไฟล์ในเครื่องไม่ได้ ต้องนำไฟล์ไปโฮสต์ (GitHub Pages / Netlify) แล้วเปิดผ่านที่อยู่ https:// เพราะ Google Sign-In ไม่ทำงานกับ file://");
+if(API_URL.includes("PASTE_")||CLIENT_ID.includes("PASTE_"))return busy("ยังไม่ได้ตั้งค่า: แก้ API_URL และ CLIENT_ID ที่บรรทัดบนสุดของสคริปต์ใน index.html");
+let n=0;const w=setInterval(()=>{n++;if(window.google&&google.accounts){clearInterval(w);try{login()}catch(e){busy("ปุ่มล็อกอินสร้างไม่สำเร็จ: "+esc(msg(e)))}}
+else if(n>60){clearInterval(w);busy("โหลดสคริปต์ Google Sign-In ไม่ได้ (accounts.google.com ถูกบล็อก หรือเครือข่ายมีปัญหา) ลองเครือข่ายอื่น ปิดตัวบล็อกโฆษณา หรือเปิดนอกแอปอื่นที่ฝังหน้าเว็บ")}},100)});
+</script></body></html>
